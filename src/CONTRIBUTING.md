@@ -77,3 +77,5 @@ Issues: Please don't ask to be assigned tasks in issues
   - Windows (MSYS2 64-bit): `pacman -S mingw-w64-x86_64-clang-tools-extra`
   - Linux (Debian): `sudo apt-get install clang-format-10 clang-tidy-10`
 - Just use google style. Can't be bothered to continue
+
+Most importantly, enjoy, I guess.
