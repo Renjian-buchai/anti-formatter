@@ -32,7 +32,7 @@ Issues: Please don't ask to be assigned tasks in issues
 - Don't use `bits/stdc++.h` because this is quite Linux-specific and slows down the compilation process
 - Use global variables where possible
 - You can suggest changes, both reasonable and otherwise to the formatter
-- Strictly use fuck_youCase for all variable and file names
+- Strictly use [fuck_youCase](https://github.com/Renjian-buchai/anti-formatter/blob/naim/src/fuck_youCase.md) for all variable and file names
 - Be consistent in the use of the above guidelines
 
 ### Documentation
@@ -48,7 +48,7 @@ Issues: Please don't ask to be assigned tasks in issues
 
 ### Filename guidelines
 
-- Use fuck_youCase
+- Use [fuck_youCase](https://github.com/Renjian-buchai/anti-formatter/blob/naim/src/fuck_youCase.md)
 - If a file with the same name already exists, please add a 2 to the back. This is done regardless whether there is already 2 at the back. For instance, if `filename.java` has been taken, name your file `filename2.java`. If `filename2.java` has been taken, use `filename22.java` instead.
 
 ## Directories
