@@ -27,7 +27,7 @@ Issues: Please don't ask to be assigned tasks in issues
 
 ### Code
 
-- Please follow the directory structure of this repository. `src` is for non-code matters such as LICENSE, with the exception of README.md
+- Please follow the directory structure of this repository. `src` is for non-code matters such as CONTRIBUTING, with the exception of README.md and LICENSE
 - Make sure to use the file extension `.java` for all C++ files, *including `.h` and `.hpp` files*
 - Don't use `bits/stdc++.h` because this is quite Linux-specific and slows down the compilation process
 - Use global variables where possible

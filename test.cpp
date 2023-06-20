@@ -1,41 +1,26 @@
+#include <cstdint>
 #include <fstream>
 #include <iostream>
-#include <cstdint>
 #include <vector>
 
-enum tokens : uint8_t { token_sep, token_seg }
-;
+enum tokens : uint8_t { token_sep, token_seg };
 
-bool isEscapeSequence = false; // Don't replace. Somehow doesn't work
-
-uint8_t flags = 0;
-
+/*does not support comments. except this one for some reason.*/
 struct token {
   std::string contents;
   uint8_t type;
 };
 
-std::string trimSpaces(std::string input, uint8_t tokentype) {
-  if (input.empty()) {
-    return " ";
-  }
-  if (tokentype == token_seg) {
-    std::size_t firstNonSpace = input.find_first_not_of(' ');
-    if (firstNonSpace == std::string::npos) {
-      return "";
-    }
-    std::size_t lastNonSpace = input.find_last_not_of(' ');
-    return input.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
-  } else {
-    std::string toReturn = "";
-    for (char c : input) {
-      if (c != ' ') {
-        toReturn += c;
-      }
-    }
-    return toReturn;
-  }
-}
+uint8_t flags = 0;
+
+bool isStringLiteral = false;
+bool isCharLiteral = false;
+bool isEscapeSequence = false;
+bool tokenStartedWithSharp = false;
+bool forceNewToken = false;
+bool endOfFile = false;
+
+std::string trimSpaces(std::string, uint8_t);
 
 int main(int argc, char* argv[]) {
   if (argc != 2) {
@@ -53,48 +38,49 @@ int main(int argc, char* argv[]) {
   std::string currentString = "";
 
   char character;
-  while (!(flags & (1 << 4))) {
+  while (!(flags & (1 << 5))) {
     if (!sourcefile.get(character)) {
+      flags |= (1 << 5);
       flags |= (1 << 4);
-      flags |= (1 << 3);
       character = 'F';
     }
 
-    if (character == '"' && !(flags & (1 << 1)) && isEscapeSequence == false) {
-      if (!(flags & 1)) {
-        flags |= 1;
+    if (character == '"' && !(flags & (1 << 1)) && !(flags & (1 << 2))) {
+      if (flags & (1 << 0)) {
+        flags |= (1 << 0);
       } else {
-        flags ^= 1;
+        flags ^= (1 << 0);
       }
     }
 
-    if (character == '\'' && !(flags & 1) && isEscapeSequence == false) {
+    if (character == '\'' && !(flags & (1 << 0)) && !(flags & (1 << 2))) {
       if (!(flags & (1 << 1))) {
-        flags |= 1 << 1;
+        flags |= (1 << 1);
       } else {
-        flags ^= 1 << 1;
+        flags ^= (1 << 1);
       }
     }
 
-    if (character == '\\' && isEscapeSequence == false) {
-      isEscapeSequence = true;
+    if (character == '\\' && !(flags & (1 << 2))) {
+      flags |= (1 << 2);
     } else {
-      isEscapeSequence = false;
+      flags ^= (1 << 2);
     }
 
-    if (character == '\n' && flags & (1 << 2)) {
-      flags |= (1 << 3);
+    if (character == '\n' && flags & (1 << 3)) {
+      flags |= (1 << 4);
     } else if (character == '\n' || character == '\t' || character == ' ') {
       currentString.push_back(' ');
-    } else if (!(flags & 1) && !(flags & (1 << 1))
-        && (character == '(' || character == ')' || character == '[' || character == ']'
-            || character == '{' || character == '}' || character == ';' || character == '|'
-            || character == '&')) {
-      if (currentType == token_sep && !(flags & (1 << 4)) && !(flags & (1 << 3))) {
+    } else if (!(flags & ((1 << 0))) && !(flags & (1 << 1)) &&
+               (character == '(' || character == ')' || character == '[' ||
+                character == ']' || character == '{' || character == '}' ||
+                character == ';' || character == '|' || character == '&')) {
+      if (currentType == token_sep && !(flags & (1 << 5)) &&
+          !(flags & (1 << 4))) {
         currentString.push_back(character);
       } else {
-        if (flags & (1 << 3)) {
-          flags ^= (1 << 3);
+        if (flags & (1 << 4)) {
+          flags ^= (1 << 4);
         }
         token newToken;
         newToken.contents = currentString;
@@ -105,15 +91,16 @@ int main(int argc, char* argv[]) {
         currentType = token_sep;
 
         currentString.push_back(character);
-        flags ^= (1 << 2);
+        flags ^= (1 << 3);
       }
 
     } else {
-      if (currentType == token_seg && !(flags & (1 << 4)) && !(flags & (1 << 3))) {
+      if (currentType == token_seg && !(flags & (1 << 5)) &&
+          !(flags & (1 << 4))) {
         currentString.push_back(character);
       } else {
-        if (flags & (1 << 3)) {
-          flags ^= (1 << 3);
+        if (flags & (1 << 4)) {
+          flags ^= (1 << 4);
         }
         token newToken;
         newToken.contents = currentString;
@@ -125,9 +112,9 @@ int main(int argc, char* argv[]) {
 
         currentString.push_back(character);
         if (character == '#') {
-          flags |= (1 << 2);
+          flags |= (1 << 3);
         } else {
-          flags ^= (1 << 2);
+          flags ^= (1 << 3);
         }
       }
     }
@@ -136,7 +123,8 @@ int main(int argc, char* argv[]) {
   sourcefile.close();
 
   for (size_t i = 0; i < allTokens.size(); i++) {
-    allTokens[i].contents = trimSpaces(allTokens[i].contents, allTokens[i].type);
+    allTokens[i].contents =
+        trimSpaces(allTokens[i].contents, allTokens[i].type);
   }
 
   uint32_t longestSeparatorChain = 0;
@@ -198,4 +186,26 @@ int main(int argc, char* argv[]) {
     }
   }
   targetfile.close();
+}
+
+std::string trimSpaces(std::string input, uint8_t tokentype) {
+  if (input.empty()) {
+    return " ";
+  }
+  if (tokentype == token_seg) {
+    std::size_t firstNonSpace = input.find_first_not_of(' ');
+    if (firstNonSpace == std::string::npos) {
+      return "";
+    }
+    std::size_t lastNonSpace = input.find_last_not_of(' ');
+    return input.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
+  } else {
+    std::string toReturn = "";
+    for (char c : input) {
+      if (c != ' ') {
+        toReturn += c;
+      }
+    }
+    return toReturn;
+  }
 }

@@ -1,25 +1,27 @@
+/**
+ * @file stdformatter.java
+ * @author Erichtoaster
+ * @brief The old one for future reference
+ */
+
 #include <fstream>
 #include <iostream>
-#include <cstdint>
 #include <vector>
 
-enum tokens : uint8_t { token_sep, token_seg }
-;
+#define TOKENTYPE_Separator 0
+#define TOKENTYPE_Segment 1
 
-bool isEscapeSequence = false; // Don't replace. Somehow doesn't work
-
-uint8_t flags = 0;
-
+/*does not support comments. except this one for some reason.*/
 struct token {
   std::string contents;
-  uint8_t type;
+  int type;
 };
 
-std::string trimSpaces(std::string input, uint8_t tokentype) {
+std::string trimSpaces(std::string input, int tokentype) {
   if (input.empty()) {
     return " ";
   }
-  if (tokentype == token_seg) {
+  if (tokentype == TOKENTYPE_Segment) {
     std::size_t firstNonSpace = input.find_first_not_of(' ');
     if (firstNonSpace == std::string::npos) {
       return "";
@@ -49,30 +51,35 @@ int main(int argc, char* argv[]) {
   }
 
   std::vector<token> allTokens = {};
-  uint8_t currentType = token_sep;
+  int currentType = TOKENTYPE_Separator;
   std::string currentString = "";
-
+  bool isStringLiteral = false;
+  bool isCharLiteral = false;
+  bool isEscapeSequence = false;
+  bool tokenStartedWithSharp = false;
+  bool forceNewToken = false;
   char character;
-  while (!(flags & (1 << 4))) {
+  bool endOfFile = false;
+  while (!endOfFile) {
     if (!sourcefile.get(character)) {
-      flags |= (1 << 4);
-      flags |= (1 << 3);
+      endOfFile = true;
+      forceNewToken = true;
       character = 'F';
     }
 
-    if (character == '"' && !(flags & (1 << 1)) && isEscapeSequence == false) {
-      if (!(flags & 1)) {
-        flags |= 1;
+    if (character == '"' && isCharLiteral == false && isEscapeSequence == false) {
+      if (isStringLiteral == false) {
+        isStringLiteral = true;
       } else {
-        flags ^= 1;
+        isStringLiteral = false;
       }
     }
 
-    if (character == '\'' && !(flags & 1) && isEscapeSequence == false) {
-      if (!(flags & (1 << 1))) {
-        flags |= 1 << 1;
+    if (character == '\'' && isStringLiteral == false && isEscapeSequence == false) {
+      if (isCharLiteral == false) {
+        isCharLiteral = true;
       } else {
-        flags ^= 1 << 1;
+        isCharLiteral = false;
       }
     }
 
@@ -82,19 +89,19 @@ int main(int argc, char* argv[]) {
       isEscapeSequence = false;
     }
 
-    if (character == '\n' && flags & (1 << 2)) {
-      flags |= (1 << 3);
+    if (character == '\n' && tokenStartedWithSharp) {
+      forceNewToken = true;
     } else if (character == '\n' || character == '\t' || character == ' ') {
       currentString.push_back(' ');
-    } else if (!(flags & 1) && !(flags & (1 << 1))
+    } else if (isStringLiteral == false && isCharLiteral == false
         && (character == '(' || character == ')' || character == '[' || character == ']'
             || character == '{' || character == '}' || character == ';' || character == '|'
             || character == '&')) {
-      if (currentType == token_sep && !(flags & (1 << 4)) && !(flags & (1 << 3))) {
+      if (currentType == TOKENTYPE_Separator && !endOfFile && !forceNewToken) {
         currentString.push_back(character);
       } else {
-        if (flags & (1 << 3)) {
-          flags ^= (1 << 3);
+        if (forceNewToken) {
+          forceNewToken = false;
         }
         token newToken;
         newToken.contents = currentString;
@@ -102,18 +109,18 @@ int main(int argc, char* argv[]) {
         allTokens.push_back(newToken);
 
         currentString = "";
-        currentType = token_sep;
+        currentType = TOKENTYPE_Separator;
 
         currentString.push_back(character);
-        flags ^= (1 << 2);
+        tokenStartedWithSharp = false;
       }
 
     } else {
-      if (currentType == token_seg && !(flags & (1 << 4)) && !(flags & (1 << 3))) {
+      if (currentType == TOKENTYPE_Segment && !endOfFile && !forceNewToken) {
         currentString.push_back(character);
       } else {
-        if (flags & (1 << 3)) {
-          flags ^= (1 << 3);
+        if (forceNewToken) {
+          forceNewToken = false;
         }
         token newToken;
         newToken.contents = currentString;
@@ -121,13 +128,13 @@ int main(int argc, char* argv[]) {
         allTokens.push_back(newToken);
 
         currentString = "";
-        currentType = token_seg;
+        currentType = TOKENTYPE_Segment;
 
         currentString.push_back(character);
         if (character == '#') {
-          flags |= (1 << 2);
+          tokenStartedWithSharp = true;
         } else {
-          flags ^= (1 << 2);
+          tokenStartedWithSharp = false;
         }
       }
     }
@@ -139,10 +146,10 @@ int main(int argc, char* argv[]) {
     allTokens[i].contents = trimSpaces(allTokens[i].contents, allTokens[i].type);
   }
 
-  uint32_t longestSeparatorChain = 0;
-  uint32_t longestSegment = 0;
+  unsigned int longestSeparatorChain = 0;
+  unsigned int longestSegment = 0;
   for (size_t i = 0; i < allTokens.size(); i++) {
-    if (allTokens[i].type == token_seg) {
+    if (allTokens[i].type == TOKENTYPE_Segment) {
       if (allTokens[i].contents.length() > longestSegment) {
         longestSegment = allTokens[i].contents.length();
       }
@@ -161,12 +168,12 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  uint32_t whitespace = 0;
-  uint8_t lastType = token_seg;
+  unsigned int whitespace = 0;
+  int lastType = TOKENTYPE_Segment;
   for (size_t i = 0; i < allTokens.size(); i++) {
     switch (allTokens[i].type) {
-      case token_sep:
-        if (lastType == token_sep) {
+      case TOKENTYPE_Separator:
+        if (lastType == TOKENTYPE_Separator) {
           targetfile << "\n";
         }
 
@@ -177,10 +184,10 @@ int main(int argc, char* argv[]) {
           targetfile << " ";
         }
         targetfile << " ";
-        lastType = token_sep;
+        lastType = TOKENTYPE_Separator;
         break;
-      case token_seg:
-        if (lastType == token_seg) {
+      case TOKENTYPE_Segment:
+        if (lastType == TOKENTYPE_Segment) {
           for (size_t j = 0; j < longestSeparatorChain; j++) {
             targetfile << " ";
           }
@@ -193,7 +200,7 @@ int main(int argc, char* argv[]) {
           targetfile << " ";
         }
         targetfile << allTokens[i].contents << "\n";
-        lastType = token_seg;
+        lastType = TOKENTYPE_Segment;
         break;
     }
   }
