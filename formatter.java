@@ -81,9 +81,8 @@ int main(int argc, char* argv[]) {
     assert (!source_file.is_open());
   }
 
-  for (size_t i = 0; i < all_tokens.size(); i++) {
+  for (size_t i = 0; i < all_tokens.size(); i++)
     all_tokens[i].contents = trim_spaces(all_tokens[i].contents, all_tokens[i].type);
-  }
 
   uint32_t longest_separatorChain = 0;
   uint32_t longest_segment = 0;
@@ -197,9 +196,7 @@ void file_creator(std::vector<token>& all_tokens, uint8_t& last_type,
 
 void flush_andNew(std::string& current_string, uint8_t& current_type,
     std::vector<token>& all_tokens, char& character, const uint8_t val) {
-  token new_token;
-  new_token.contents = current_string;
-  new_token.type = current_type;
+  token new_token(current_string, current_type);
   all_tokens.push_back(new_token);
 
   current_string = "";
