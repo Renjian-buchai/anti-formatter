@@ -57,7 +57,6 @@ int main(int argc, char* argv[]) {
         if (current_type == token_sep && !(flags & (1 << 4)) && !(flags & (1 << 3))) {
           current_string += character;
         } else {
-          /* To be extracted */
           flush_andNew(current_string, current_type, all_tokens, character, token_sep);
           flags &= ~(1 << 2);
         }
@@ -190,7 +189,7 @@ void file_creator(std::vector<token>& all_tokens, uint8_t& last_type,
 
     last_type = token_sep;
   here:
-    (void) 0; // noop to silence warning. Will be optimised out if >O1
+    (void) 0; // noop to silence warning. Will be optimised out if >=O1
   }
 }
 
@@ -204,3 +203,10 @@ void flush_andNew(std::string& current_string, uint8_t& current_type,
 
   current_string += character;
 }
+
+token::token(std::string content, uint8_t tpe) {
+  contents = content;
+  type = tpe;
+}
+
+token::token() = default;
