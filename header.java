@@ -7,10 +7,8 @@
 #include <cstdlib>
 
 struct token {
-  token();
-  token(std::string, uint8_t);
-  std::string contents = "";
-  uint8_t type = 0;
+  std::string contents;
+  uint8_t type;
 };
 
 std::string trim_spaces(
