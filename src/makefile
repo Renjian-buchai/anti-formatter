@@ -13,10 +13,6 @@ vcc:
 
 run: ../antiformatter.exe 
 	../antiformatter ../test.cpp
-	../antiformatter ../test2.cpp
 
 stdgcc: ../stdformatter.java
 	g++ -x c++ ../stdformatter.java -o ../antiformatter.exe -Wall -Wextra -Werror $(INC) $(DEF) $(LIB) -O2
-
-clear: ../test.cpp.out ../test2.cpp.out 
-	rm -f ../test.cpp.out ../test2.cpp.out 
