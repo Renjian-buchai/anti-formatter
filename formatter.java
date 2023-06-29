@@ -22,25 +22,24 @@ enum tokens : uint8_t { token_sep, token_seg }
 uint8_t flags = 0;
 
 int main(int argc, char* argv[]) {
-  int8_t return_value = 0; // zero-initialises return-value, should stay till end of main.
-  (void) (argc != 2  ? std::cerr << "Usage: " << argv[0] << " <sourcefile>\n",
-      ++return_value : 0); // checks if just run without console arguments.
-  std::vector<token> all_tokens = {}; // TODO turn into an array or smthg that's better
+  int8_t return_value = 0;
+  (void) (argc != 2 ? std::cerr << "Usage: " << argv[0] << " <sourcefile>\n", ++return_value : 0);
+  std::vector<token> allTokens = {};
   { // Scope operator to clear ram, since else, ifstream etc. will stay till the end of main.
-    std::ifstream source_file(argv[1], std::ios::in);
-    (void) (!source_file ? std::cerr << "Faled to open file " << argv[1] << "\n",
-        ++return_value   : 0);
+    std::ifstream sourcefile(argv[1], std::ios::in);
+    (void) (!sourcefile ? std::cerr << "Faled to open file " << argv[1] << "\n",
+        ++return_value  : 0);
 
-    uint8_t current_type = 0; // 0 corresponds to token_sep
-    std::string current_string = "";
+    uint8_t currentType = token_sep;
+    std::string currentString = "";
 
     if (return_value)
       return return_value;
 
     char character;
     while (!(flags & (1 << 4))) {
-      (void) (!source_file.get(character) ? flags |= (1 << 4), flags |= (1 << 3),
-          (void) (character = 'F')        : (void) 0);
+      (void) (!sourcefile.get(character) ? flags |= (1 << 4), flags |= (1 << 3),
+          (void) (character = 'F')       : (void) 0);
 
       is_stringLiteral(character, flags);
       is_charLiteral(character, flags);
@@ -49,70 +48,88 @@ int main(int argc, char* argv[]) {
       if (character == '\n' && flags & (1 << 2)) {
         flags |= (1 << 3);
       } else if (character == '\n' || character == '\t' || character == ' ') {
-        current_string += ' ';
+        currentString.push_back(' ');
       } else if (!(flags & 1) && !(flags & (1 << 1))
           && (character == '(' || character == ')' || character == '[' || character == ']'
               || character == '{' || character == '}' || character == ';' || character == '|'
               || character == '&')) {
-        if (current_type == token_sep && !(flags & (1 << 4)) && !(flags & (1 << 3))) {
-          current_string += character;
+        if (currentType == token_sep && !(flags & (1 << 4)) && !(flags & (1 << 3))) {
+          currentString.push_back(character);
         } else {
-          flush_andNew(current_string, current_type, all_tokens, character, token_sep);
-          flags &= ~(1 << 2);
+          /* To be extracted */ {
+            token newToken;
+            newToken.contents = currentString;
+            newToken.type = currentType;
+            allTokens.push_back(newToken);
+
+            currentString = "";
+            currentType = token_sep;
+
+            currentString.push_back(character);
+            flags &= ~(1 << 2);
+          }
         }
       } else {
-        (void) (current_type == token_seg ? flags & (1 << 4) // No touchy, you'll fuck this up
-            ? (void) (flags = flags & (1 << 3) ? flags & ~(1 << 3) : flags),
-            (void) (flush_andNew(current_string, current_type, all_tokens, character, token_seg)),
-            (void) (flags = character == '#' ? flags | (1 << 2) : flags & ~(1 << 2))
-            : flags & (1 << 3) ? ((void) (flags = flags & (1 << 3) ? flags & ~(1 << 3) : flags),
-                  (void) (flush_andNew(
-                      current_string, current_type, all_tokens, character, token_seg)),
-                  (void) (flags = character == '#' ? flags | (1 << 2) : flags & ~(1 << 2)))
-                               : (void) (current_string += character)
-                               : (void) (flags = flags & (1 << 3) ? flags & ~(1 << 3) : flags),
-            (void) (flush_andNew(current_string, current_type, all_tokens, character, token_seg)),
-            (void) (flags = character == '#' ? flags | (1 << 2) : flags & ~(1 << 2)));
+        if (currentType == token_seg && !(flags & (1 << 4)) && !(flags & (1 << 3))) {
+          currentString.push_back(character);
+        } else {
+          /* To be extracted */ {
+            if (flags & (1 << 3)) {
+              flags &= ~(1 << 3);
+            }
+            token newToken;
+            newToken.contents = currentString;
+            newToken.type = currentType;
+            allTokens.push_back(newToken);
+
+            currentString = "";
+            currentType = token_seg;
+
+            currentString.push_back(character);
+            if (character == '#') {
+              flags |= (1 << 2);
+            } else {
+              flags &= ~(1 << 2);
+            }
+          }
+        }
       }
     }
 
-    source_file.close();
-    assert (!source_file.is_open());
+    sourcefile.close();
+    assert (!sourcefile.is_open());
   }
 
-  for (size_t i = 0; i < all_tokens.size(); i++) {
-    all_tokens[i].contents = trim_spaces(all_tokens[i].contents, all_tokens[i].type);
+  for (size_t i = 0; i < allTokens.size(); i++) {
+    allTokens[i].contents = trim_spaces(allTokens[i].contents, allTokens[i].type);
   }
 
-  uint32_t longest_separatorChain = 0;
-  uint32_t longest_segment = 0;
-  for (size_t i = 0; i < all_tokens.size(); i++)
-    (void) (all_tokens[i].type == token_seg
-            ? longest_segment = all_tokens[i].contents.length() > longest_segment
-                ? all_tokens[i].contents.length()
-                : longest_segment
-            : longest_separatorChain = all_tokens[i].contents.length() > longest_separatorChain
-                ? all_tokens[i].contents.length()
-                : longest_separatorChain);
+  uint32_t longestSeparatorChain = 0;
+  uint32_t longestSegment = 0;
+  for (size_t i = 0; i < allTokens.size(); i++)
+    (void) (allTokens[i].type == token_seg
+            ? longestSegment = allTokens[i].contents.length() > longestSegment
+                ? allTokens[i].contents.length()
+                : longestSegment
+            : longestSeparatorChain = allTokens[i].contents.length() > longestSeparatorChain
+                ? allTokens[i].contents.length()
+                : longestSeparatorChain);
 
-  std::string output_fileName = std::string(argv[1]) + ".out";
-  std::ofstream target_file(output_fileName.c_str(), std::ios::out);
-  (void) (!target_file ? std::cerr << "Failed to create file " << argv[1] << ".out"
-                                   << "\n",
+  std::string outputfilename = std::string(argv[1]) + ".out";
+  std::ofstream targetfile(outputfilename.c_str(), std::ios::out);
+  (void) (!targetfile ? std::cerr << "Failed to create file " << argv[1] << ".out"
+                                  << "\n",
       ++return_value : 0);
 
   if (return_value)
     return return_value;
 
-  {
-    uint32_t white_space = 0;
-    uint8_t last_type = token_seg;
-    file_creator(
-        all_tokens, last_type, longest_separatorChain, target_file, white_space, longest_segment);
-  }
-  target_file.close();
+  uint32_t whitespace = 0;
+  uint8_t lastType = token_seg;
+  file_creator(allTokens, lastType, longestSeparatorChain, targetfile, whitespace, longestSegment);
+  targetfile.close();
 
-  assert (!target_file.is_open());
+  assert (!targetfile.is_open());
 
   std::cout << 1;
 }
@@ -162,33 +179,32 @@ void is_escapeSequence(const char& character, uint8_t& flags) {
   }
 }
 
-void file_creator(std::vector<token>& all_tokens, uint8_t& last_type,
-    const uint32_t& longest_separatorChain, std::ofstream& target_file, uint32_t& white_space,
-    const uint32_t& longest_segment) {
-  for (size_t i = 0; i < all_tokens.size(); i++) {
-    if (all_tokens[i].type) {
-      if (last_type == token_seg) {
-        for (size_t j = 0; j < longest_separatorChain; j++) target_file << " ";
-        target_file << " ";
+void file_creator(std::vector<token>& allTokens, uint8_t& lastType, uint32_t& longestSeparatorChain,
+    std::ofstream& targetfile, uint32_t& whitespace, uint32_t& longestSegment) {
+  for (size_t i = 0; i < allTokens.size(); i++) {
+    if (allTokens[i].type) {
+      if (lastType == token_seg) {
+        for (size_t j = 0; j < longestSeparatorChain; j++) targetfile << " ";
+        targetfile << " ";
       }
 
-      white_space = longest_segment - all_tokens[i].contents.length();
+      whitespace = longestSegment - allTokens[i].contents.length();
 
-      for (size_t j = 0; j < white_space / 2; j++) target_file << " ";
+      for (size_t j = 0; j < whitespace / 2; j++) targetfile << " ";
 
-      target_file << all_tokens[i].contents << "\n";
-      last_type = token_seg;
+      targetfile << allTokens[i].contents << "\n";
+      lastType = token_seg;
       goto here;
     }
-    (void) (last_type == token_sep ? (void) (target_file << "\n") : (void) 0);
+    (void) (lastType == token_sep ? (void) (targetfile << "\n") : (void) 0);
 
-    white_space = longest_separatorChain - all_tokens[i].contents.length();
-    target_file << all_tokens[i].contents;
+    whitespace = longestSeparatorChain - allTokens[i].contents.length();
+    targetfile << allTokens[i].contents;
 
-    for (size_t j = 0; j < white_space; j++) target_file << " ";
-    target_file << " ";
+    for (size_t j = 0; j < whitespace; j++) targetfile << " ";
+    targetfile << " ";
 
-    last_type = token_sep;
+    lastType = token_sep;
   here:
     (void) 0; // noop to silence warning. Will be optimised out if >=O1
   }
@@ -206,10 +222,3 @@ void flush_andNew(std::string& current_string, uint8_t& current_type,
 
   current_string += character;
 }
-
-token::token(std::string content, uint8_t tpe) {
-  contents = content;
-  type = tpe;
-}
-
-token::token() = default;

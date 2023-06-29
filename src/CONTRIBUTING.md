@@ -78,12 +78,4 @@ Issues: Please don't ask to be assigned tasks in issues
   - Linux (Debian): `sudo apt-get install clang-format-10 clang-tidy-10`
 - Just use google style. Can't be bothered to continue
 
-## Issues
-
-- Known errors:
-  - None. There are many, we just don't know about them.
-  - If you find any, feel free to just stop using this service.
-  - Please don't add any issues, because we won't fix them.
-  - If you want something done correctly, do it yourself.
-
 Most importantly, enjoy, I guess.
